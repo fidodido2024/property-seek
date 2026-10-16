@@ -10,6 +10,7 @@ import { PropertyDetailModal } from './components/PropertyDetailModal';
 import { ProSubscriptionModal } from './components/ProSubscriptionModal';
 import { UraMarketWatchModal } from './components/UraMarketWatchModal';
 import { VacantSitesExplorer } from './components/VacantSitesExplorer';
+import { TalkToUs } from './components/TalkToUs';
 import { Footer } from './components/Footer';
 import { MOCK_PROPERTIES } from './data/mockProperties';
 import { Property, FloorPlan, FilterState, PriceAlert } from './types/property';
@@ -116,8 +117,8 @@ export default function App() {
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isUraModalOpen, setIsUraModalOpen] = useState(false);
 
-  // Active view tab (home, shortlist, compare, alerts, vacant-sites)
-  const [activeView, setActiveView] = useState<'home' | 'shortlist' | 'compare' | 'alerts' | 'vacant-sites'>('home');
+  // Active view tab (home, shortlist, compare, alerts, vacant-sites, talk-to-us)
+  const [activeView, setActiveView] = useState<'home' | 'shortlist' | 'compare' | 'alerts' | 'vacant-sites' | 'talk-to-us'>('home');
 
   // Sync state to local storage
   useEffect(() => {
@@ -363,7 +364,7 @@ export default function App() {
       />
 
       {/* Main Search Hero with Dropdowns (Shown on home & compare views) */}
-      {activeView !== 'vacant-sites' && (
+      {activeView !== 'vacant-sites' && activeView !== 'talk-to-us' && (
         <SearchHero
           filters={filters}
           setFilters={setFilters}
@@ -378,8 +379,20 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-        {/* Dedicated URA Vacant Sites & GLS Land Sales View */}
-        {activeView === 'vacant-sites' ? (
+        {/* Dedicated Talk to Us (Disqus Forum) View */}
+        {activeView === 'talk-to-us' ? (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setActiveView('home')}
+                className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 cursor-pointer"
+              >
+                ← Back to Singapore New Launches
+              </button>
+            </div>
+            <TalkToUs />
+          </div>
+        ) : activeView === 'vacant-sites' ? (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <button

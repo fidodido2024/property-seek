@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ShieldCheck,
   LandPlot,
+  MessageSquare,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -26,8 +27,8 @@ interface NavbarProps {
   onOpenProModal: () => void;
   isProUser: boolean;
   onToggleProUser: () => void;
-  activeView: 'home' | 'shortlist' | 'compare' | 'alerts' | 'vacant-sites';
-  setActiveView: (view: 'home' | 'shortlist' | 'compare' | 'alerts' | 'vacant-sites') => void;
+  activeView: 'home' | 'shortlist' | 'compare' | 'alerts' | 'vacant-sites' | 'talk-to-us';
+  setActiveView: (view: 'home' | 'shortlist' | 'compare' | 'alerts' | 'vacant-sites' | 'talk-to-us') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -193,6 +194,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               <TrendingUp className="w-4 h-4 text-emerald-600" />
               <span>URA Caveats</span>
             </button>
+
+            <button
+              onClick={() => {
+                setActiveView('talk-to-us');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`px-3 py-2 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
+                activeView === 'talk-to-us'
+                  ? 'text-emerald-800 font-semibold bg-emerald-50'
+                  : 'hover:text-emerald-700 hover:bg-slate-50'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4 text-emerald-600" />
+              <span>Talk to us</span>
+            </button>
           </nav>
 
           {/* Action CTAs */}
@@ -314,6 +330,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-emerald-700" />
                 <span>URA Market Caveats &amp; PSF Trends</span>
+              </span>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveView('talk-to-us');
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`flex items-center justify-between p-3 rounded-lg text-sm font-semibold cursor-pointer ${
+                activeView === 'talk-to-us' ? 'bg-emerald-50 text-emerald-800' : 'text-slate-800 hover:bg-slate-50'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-emerald-700" />
+                <span>Talk to us (Disqus Forum)</span>
               </span>
               <ChevronRight className="w-4 h-4 text-slate-400" />
             </button>

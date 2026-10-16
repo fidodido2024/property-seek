@@ -9,6 +9,7 @@ import { ShortlistDrawer } from './components/ShortlistDrawer';
 import { PropertyDetailModal } from './components/PropertyDetailModal';
 import { ProSubscriptionModal } from './components/ProSubscriptionModal';
 import { UraMarketWatchModal } from './components/UraMarketWatchModal';
+import { VacantSitesExplorer } from './components/VacantSitesExplorer';
 import { Footer } from './components/Footer';
 import { MOCK_PROPERTIES } from './data/mockProperties';
 import { Property, FloorPlan, FilterState, PriceAlert } from './types/property';
@@ -115,8 +116,8 @@ export default function App() {
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isUraModalOpen, setIsUraModalOpen] = useState(false);
 
-  // Active view tab (home, shortlist, compare, alerts)
-  const [activeView, setActiveView] = useState<'home' | 'shortlist' | 'compare' | 'alerts'>('home');
+  // Active view tab (home, shortlist, compare, alerts, vacant-sites)
+  const [activeView, setActiveView] = useState<'home' | 'shortlist' | 'compare' | 'alerts' | 'vacant-sites'>('home');
 
   // Sync state to local storage
   useEffect(() => {
@@ -361,33 +362,54 @@ export default function App() {
         onOpenAlerts={() => setIsAlertModalOpen(true)}
       />
 
-      {/* Main Search Hero with Dropdowns */}
-      <SearchHero
-        filters={filters}
-        setFilters={setFilters}
-        totalMatches={sortedProperties.length}
-        onResetFilters={() => setFilters(INITIAL_FILTERS)}
-      />
+      {/* Main Search Hero with Dropdowns (Shown on home & compare views) */}
+      {activeView !== 'vacant-sites' && (
+        <SearchHero
+          filters={filters}
+          setFilters={setFilters}
+          totalMatches={sortedProperties.length}
+          onResetFilters={() => setFilters(INITIAL_FILTERS)}
+          onOpenVacantSites={() => {
+            setActiveView('vacant-sites');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-        {/* Floor Plan Comparison Studio (Shown when compare view is active or user expanded it) */}
-        {activeView === 'compare' && (
-          <FloorPlanCompare
-            selectedPlans={selectedComparisonPlans}
-            onRemovePlan={handleRemoveComparisonPlan}
-            onAddPlan={(prop, plan) => handleAddComparisonPlan(prop, plan)}
-            onClose={() => setActiveView('home')}
-            onToggleShortlist={handleToggleShortlist}
-            shortlistIds={shortlistIds}
-          />
-        )}
+        {/* Dedicated URA Vacant Sites & GLS Land Sales View */}
+        {activeView === 'vacant-sites' ? (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setActiveView('home')}
+                className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 cursor-pointer"
+              >
+                ← Back to Singapore New Launches
+              </button>
+            </div>
+            <VacantSitesExplorer />
+          </div>
+        ) : (
+          <>
+            {/* Floor Plan Comparison Studio (Shown when compare view is active or user expanded it) */}
+            {activeView === 'compare' && (
+              <FloorPlanCompare
+                selectedPlans={selectedComparisonPlans}
+                onRemovePlan={handleRemoveComparisonPlan}
+                onAddPlan={(prop, plan) => handleAddComparisonPlan(prop, plan)}
+                onClose={() => setActiveView('home')}
+                onToggleShortlist={handleToggleShortlist}
+                shortlistIds={shortlistIds}
+              />
+            )}
 
-        {/* Listings Section Header & Sorting Bar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200/90">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              <span>Singapore New Launches</span>
+            {/* Listings Section Header & Sorting Bar */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200/90">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                  <span>Singapore New Launches</span>
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                 {sortedProperties.length} Found
               </span>
@@ -494,6 +516,8 @@ export default function App() {
               <span>Explore Pro Plan ($68/mo)</span>
             </button>
           </div>
+        )}
+          </>
         )}
       </main>
 

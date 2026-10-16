@@ -11,12 +11,14 @@ import {
   MapPin,
   ChevronRight,
   ShieldCheck,
+  LandPlot,
 } from 'lucide-react';
 
 interface NavbarProps {
   shortlistCount: number;
   activeAlertsCount: number;
   comparisonCount: number;
+  vacantSitesCount?: number;
   onOpenShortlist: () => void;
   onOpenAlerts: () => void;
   onOpenComparison: () => void;
@@ -24,8 +26,8 @@ interface NavbarProps {
   onOpenProModal: () => void;
   isProUser: boolean;
   onToggleProUser: () => void;
-  activeView: 'home' | 'shortlist' | 'compare' | 'alerts';
-  setActiveView: (view: 'home' | 'shortlist' | 'compare' | 'alerts') => void;
+  activeView: 'home' | 'shortlist' | 'compare' | 'alerts' | 'vacant-sites';
+  setActiveView: (view: 'home' | 'shortlist' | 'compare' | 'alerts' | 'vacant-sites') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -167,11 +169,29 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             <button
+              onClick={() => {
+                setActiveView('vacant-sites');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`px-3 py-2 rounded-md transition-colors flex items-center gap-1.5 cursor-pointer ${
+                activeView === 'vacant-sites'
+                  ? 'text-emerald-800 font-semibold bg-emerald-50'
+                  : 'hover:text-emerald-700 hover:bg-slate-50'
+              }`}
+            >
+              <LandPlot className="w-4 h-4 text-emerald-600" />
+              <span>Vacant Sites</span>
+              <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                GLS
+              </span>
+            </button>
+
+            <button
               onClick={onOpenUraData}
               className="px-3 py-2 rounded-md text-slate-700 hover:text-emerald-700 hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <TrendingUp className="w-4 h-4 text-emerald-600" />
-              <span>URA Market Watch</span>
+              <span>URA Caveats</span>
             </button>
           </nav>
 
@@ -267,6 +287,25 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={() => {
+                setActiveView('vacant-sites');
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`flex items-center justify-between p-3 rounded-lg text-sm font-semibold cursor-pointer ${
+                activeView === 'vacant-sites' ? 'bg-emerald-50 text-emerald-800' : 'text-slate-800 hover:bg-slate-50'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <LandPlot className="w-4 h-4 text-emerald-700" />
+                <span>URA Vacant Sites &amp; GLS Tenders</span>
+              </span>
+              <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
+                443 Sites
+              </span>
+            </button>
+
+            <button
+              onClick={() => {
                 onOpenUraData();
                 setMobileMenuOpen(false);
               }}
@@ -274,7 +313,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <span className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-emerald-700" />
-                <span>URA Market Caveats & PSF Trends</span>
+                <span>URA Market Caveats &amp; PSF Trends</span>
               </span>
               <ChevronRight className="w-4 h-4 text-slate-400" />
             </button>

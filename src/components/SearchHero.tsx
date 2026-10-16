@@ -25,6 +25,7 @@ interface SearchHeroProps {
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   totalMatches: number;
   onResetFilters: () => void;
+  onOpenVacantSites?: () => void;
 }
 
 export const SearchHero: React.FC<SearchHeroProps> = ({
@@ -32,6 +33,7 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
   setFilters,
   totalMatches,
   onResetFilters,
+  onOpenVacantSites,
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
@@ -119,6 +121,15 @@ export const SearchHero: React.FC<SearchHeroProps> = ({
             >
               Outside Central (OCR)
             </button>
+
+            {onOpenVacantSites && (
+              <button
+                onClick={onOpenVacantSites}
+                className="ml-auto px-3 sm:px-4 py-1.5 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-300 hover:bg-emerald-100 flex items-center gap-1.5 cursor-pointer shrink-0 transition-colors"
+              >
+                <span>🏛️ URA Vacant Sites (443)</span>
+              </button>
+            )}
           </div>
 
           {/* Quick Search Input */}

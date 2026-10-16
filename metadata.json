@@ -1,0 +1,6 @@
+{
+  "name": "PropertySeek Singapore",
+  "description": "Singapore's premier new launch property portal. Shortlist developments by sector, MRT proximity, elite schools, compare floor plans side-by-side, and track real-time URA price alerts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

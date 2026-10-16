@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DiscussionEmbed, CommentCount } from 'disqus-react';
 import {
   MessageSquare,
@@ -12,6 +12,11 @@ import {
   Send,
   CheckCircle,
   ExternalLink,
+  RefreshCw,
+  Copy,
+  Info,
+  ShieldAlert,
+  Settings2,
 } from 'lucide-react';
 
 interface Topic {
@@ -44,7 +49,11 @@ const TOPICS: Topic[] = [
 
 export const TalkToUs: React.FC = () => {
   const [selectedTopic, setSelectedTopic] = useState<Topic>(TOPICS[0]);
-  const [currentUrl, setCurrentUrl] = useState<string>('https://propertyseek.sg/talk-to-us');
+  const [currentOrigin, setCurrentOrigin] = useState<string>('https://propertyseek.vercel.app');
+  const [copiedDomain, setCopiedDomain] = useState<boolean>(false);
+  const [enableSSO, setEnableSSO] = useState<boolean>(false);
+  const [disqusKey, setDisqusKey] = useState<number>(1);
+  const [isIframeLoaded, setIsIframeLoaded] = useState<boolean>(false);
 
   // Contact form state
   const [contactName, setContactName] = useState('');
@@ -52,32 +61,91 @@ export const TalkToUs: React.FC = () => {
   const [contactMessage, setContactMessage] = useState('');
   const [contactSubmitted, setContactSubmitted] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setCurrentUrl(`${window.location.origin}/talk-to-us#${selectedTopic.id}`);
-    }
-  }, [selectedTopic]);
-
   const disqusShortname = 'propertyseek';
 
-  // Article configuration object matching user specs
-  const articleConfig = {
-    url: currentUrl,
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentOrigin(window.location.origin);
+    }
+  }, []);
+
+  // Canonical absolute URL without hash fragment (#) - required by Disqus
+  const canonicalUrl = `${currentOrigin}/talk-to-us?topic=${selectedTopic.id}`;
+
+  // Build Disqus config cleanly
+  // Note: If remoteAuthS3 or apiKey is empty, passing them will break Disqus initialization.
+  const disqusConfig: any = {
+    url: canonicalUrl,
     identifier: selectedTopic.id,
     title: selectedTopic.title,
     language: 'en',
-    remoteAuthS3: '', // Configured via server if SSO is active
-    apiKey: '', // Disqus API Key
-    sso: {
+  };
+
+  // Only include SSO configuration if explicitly enabled and configured
+  if (enableSSO) {
+    disqusConfig.remoteAuthS3 = '';
+    disqusConfig.apiKey = '';
+    disqusConfig.sso = {
       name: 'PropertySeek',
-      button: 'https://propertyseek.sg/favicon.ico',
-      icon: 'https://propertyseek.sg/favicon.ico',
-      url: typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://propertyseek.sg/login',
-      logout: typeof window !== 'undefined' ? `${window.location.origin}/logout` : 'https://propertyseek.sg/logout',
-      profile_url: typeof window !== 'undefined' ? `${window.location.origin}/users/{username}` : 'https://propertyseek.sg/users/{username}',
+      button: `${currentOrigin}/favicon.ico`,
+      icon: `${currentOrigin}/favicon.ico`,
+      url: `${currentOrigin}/login`,
+      logout: `${currentOrigin}/logout`,
+      profile_url: `${currentOrigin}/users/{username}`,
       width: '800',
       height: '400',
-    },
+    };
+  }
+
+  // Reload Disqus when topic changes or when user requests reload
+  const reloadDisqus = () => {
+    setIsIframeLoaded(false);
+    setDisqusKey((prev) => prev + 1);
+
+    // Call window.DISQUS.reset if available
+    if (typeof window !== 'undefined' && (window as any).DISQUS) {
+      try {
+        (window as any).DISQUS.reset({
+          reload: true,
+          config: function (this: any) {
+            this.page.identifier = selectedTopic.id;
+            this.page.url = canonicalUrl;
+            this.page.title = selectedTopic.title;
+            this.language = 'en';
+          },
+        });
+      } catch (err) {
+        console.warn('Disqus reset error:', err);
+      }
+    }
+  };
+
+  // Watch for iframe injection to update status indicator
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const threadEl = document.getElementById('disqus_thread');
+      if (threadEl && threadEl.querySelector('iframe')) {
+        setIsIframeLoaded(true);
+        clearInterval(timer);
+      }
+    }, 800);
+
+    const timeout = setTimeout(() => {
+      clearInterval(timer);
+    }, 6000);
+
+    return () => {
+      clearInterval(timer);
+      clearTimeout(timeout);
+    };
+  }, [selectedTopic, disqusKey]);
+
+  const handleCopyDomain = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard?.writeText(window.location.hostname);
+      setCopiedDomain(true);
+      setTimeout(() => setCopiedDomain(false), 2500);
+    }
   };
 
   const handleContactSubmit = (e: React.FormEvent) => {
@@ -110,10 +178,10 @@ export const TalkToUs: React.FC = () => {
             Have questions about Singapore new launches, URA vacant land sales, or need tailored property advice? Join the Disqus community discussion or reach out directly to the PropertySeek team.
           </p>
 
-          <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-emerald-200">
+          <div className="pt-2 flex flex-wrap items-center gap-3 text-xs text-emerald-200">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Disqus Forum Active</span>
+              <span className={`w-2.5 h-2.5 rounded-full ${isIframeLoaded ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              <span>Disqus Forum: <strong>{disqusShortname}</strong></span>
             </div>
             <span>·</span>
             <div className="flex items-center gap-1.5">
@@ -124,21 +192,21 @@ export const TalkToUs: React.FC = () => {
         </div>
       </div>
 
-      {/* Main 2-Column Layout: Forum on Left, Direct Contact on Right */}
+      {/* Main 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Disqus Discussion Forum (2 cols) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Discussion Topic Switcher */}
+          {/* Discussion Thread Switcher */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs">
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Select Discussion Thread:
               </span>
 
-              {/* Comment Count component as requested */}
+              {/* CommentCount Component */}
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
                 <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                <CommentCount shortname={disqusShortname} config={articleConfig}>
+                <CommentCount shortname={disqusShortname} config={disqusConfig}>
                   Comments
                 </CommentCount>
               </div>
@@ -148,7 +216,10 @@ export const TalkToUs: React.FC = () => {
               {TOPICS.map((topic) => (
                 <button
                   key={topic.id}
-                  onClick={() => setSelectedTopic(topic)}
+                  onClick={() => {
+                    setSelectedTopic(topic);
+                    reloadDisqus();
+                  }}
                   className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     selectedTopic.id === topic.id
                       ? 'bg-emerald-50/80 border-emerald-600 shadow-xs ring-1 ring-emerald-500/30'
@@ -169,9 +240,9 @@ export const TalkToUs: React.FC = () => {
             </div>
           </div>
 
-          {/* Active Discussion Card & Disqus Embed */}
+          {/* Active Discussion Card & Disqus Embed Container */}
           <div className="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4">
-            <div className="pb-3 border-b border-slate-100 flex flex-wrap items-baseline justify-between gap-2">
+            <div className="pb-3 border-b border-slate-100 flex flex-wrap items-baseline justify-between gap-3">
               <div>
                 <span className="text-xs font-bold text-emerald-700">
                   {selectedTopic.category}
@@ -184,30 +255,112 @@ export const TalkToUs: React.FC = () => {
                 </p>
               </div>
 
-              <div className="text-xs text-slate-500">
-                Shortname: <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono font-bold text-slate-800">{disqusShortname}</code>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={reloadDisqus}
+                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Reload Discussion Embed"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Reload</span>
+                </button>
               </div>
             </div>
 
-            {/* Disqus Discussion Embed as specified */}
-            <div className="min-h-[400px] pt-2">
-              <DiscussionEmbed shortname={disqusShortname} config={articleConfig} />
+            {/* Disqus Discussion Embed */}
+            <div key={`${selectedTopic.id}-${disqusKey}`} className="min-h-[420px] w-full pt-2">
+              <DiscussionEmbed shortname={disqusShortname} config={disqusConfig} />
             </div>
 
-            {/* Note & Fallback Link */}
-            <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-slate-400">
-              <span>
-                Disqus authentication supported via Google, Facebook, Twitter, or guest comment.
-              </span>
-              <a
-                href={`https://${disqusShortname}.disqus.com`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-emerald-700 font-semibold hover:underline flex items-center gap-1"
-              >
-                <span>Open in Disqus Portal</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+            {/* Embed Troubleshooting & Verification Assistant */}
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 text-xs">
+              <div className="flex items-center justify-between font-bold text-slate-800">
+                <div className="flex items-center gap-1.5">
+                  <Info className="w-4 h-4 text-emerald-700" />
+                  <span>Disqus Embed Configuration Status</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className={`w-2 h-2 rounded-full ${isIframeLoaded ? 'bg-emerald-500' : 'bg-amber-400 animate-pulse'}`} />
+                  <span className="text-[11px] font-semibold text-slate-600">
+                    {isIframeLoaded ? 'Disqus Iframe Connected' : 'Waiting for Disqus response...'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2 bg-white rounded-lg border border-slate-200">
+                  <span className="text-slate-400 block">Configured Shortname:</span>
+                  <code className="font-bold text-emerald-800">{disqusShortname}</code>
+                </div>
+
+                <div className="p-2 bg-white rounded-lg border border-slate-200">
+                  <span className="text-slate-400 block">Identifier:</span>
+                  <code className="font-bold text-slate-800 truncate block">{selectedTopic.id}</code>
+                </div>
+              </div>
+
+              <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-[11px] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 font-medium">Canonical Page URL (Passed to Disqus):</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(canonicalUrl);
+                      alert('Canonical URL copied!');
+                    }}
+                    className="text-emerald-700 font-bold hover:underline flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copy URL</span>
+                  </button>
+                </div>
+                <div className="font-mono text-slate-700 break-all bg-slate-50 p-1.5 rounded text-[10px]">
+                  {canonicalUrl}
+                </div>
+              </div>
+
+              {/* Disqus Admin Settings Tip */}
+              <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-lg text-amber-900 text-[11px] space-y-1.5">
+                <div className="font-bold flex items-center gap-1">
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Disqus Settings Tip for Vercel / Custom Domains:</span>
+                </div>
+                <p className="text-amber-800 leading-normal">
+                  In your <strong>Disqus Admin &gt; Settings &gt; General &gt; Trusted Domains</strong>, ensure your Vercel domain is added:
+                </p>
+                <div className="flex items-center gap-2 font-mono font-bold text-slate-800 bg-white px-2 py-1 rounded border border-amber-300 w-fit">
+                  <span>{typeof window !== 'undefined' ? window.location.hostname : 'your-project.vercel.app'}</span>
+                  <button
+                    onClick={handleCopyDomain}
+                    className="text-emerald-700 hover:text-emerald-900 font-sans text-xs underline cursor-pointer"
+                  >
+                    {copiedDomain ? 'Copied!' : 'Copy Domain'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 text-[11px]">
+                <a
+                  href={`https://${disqusShortname}.disqus.com`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-700 font-bold hover:underline flex items-center gap-1"
+                >
+                  <span>Open Disqus Admin / Community Portal</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+
+                {/* Optional SSO Toggle */}
+                <button
+                  onClick={() => {
+                    setEnableSSO(!enableSSO);
+                    reloadDisqus();
+                  }}
+                  className="text-slate-500 hover:text-slate-800 text-[11px] underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Settings2 className="w-3 h-3" />
+                  <span>SSO Mode: {enableSSO ? 'Enabled' : 'Disabled (Standard Disqus Auth)'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
